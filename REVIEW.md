@@ -40,3 +40,9 @@ Previous Clarity Lab v1 was a multi-file React/Capacitor app (18 lessons, 12 exe
 ## Next release gate
 
 In a public `mohd012z/selfdev` repository, import the complete source, then invoke Actions > SelfDev Clarity Lab APK (manual only) > Run workflow. Require green Python checks, `assembleDebug`, verified `apksigner`, package ID `com.msa.claritylab`, archive integrity, SHA-256, then install on an Android phone and validate actual backup import/export, offline relaunch and screen insets. Do not label a source ZIP as an installable APK.
+## GitHub import verification — 14 November 2026
+
+- Single HTML: Git blob `4327bc0a6fd1a1e58ff9ed868399ab2bf8b50e94`, exactly matching the local file and the bundled Android asset.
+- Android source ZIP: Git blob `dfc0be855cb844a88f9192d85a12e59d429522ff`, SHA-256 `6ba59c605485fa6914d92480f2b7f5a41d4f150358ab9e1d8cf9558a1f487a85`.
+- A one-byte trailing-newline mismatch during import was detected and corrected before the final file identity check.
+- The GitHub manual-only APK workflow is committed, but has not been dispatched. GitHub Actions run count was 0 when inspected. No installable APK or physical-device verification is available.
