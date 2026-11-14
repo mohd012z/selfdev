@@ -1,0 +1,62 @@
+name: Build SelfDev Clarity Lab APK (manual only)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: selfdev-clarity-build-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    if: ${{ github.event.repository.private == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify archive SHA-256 and extract source
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "6ba59c605485fa6914d92480f2b7f5a41d4f150358ab9e1d8cf9558a1f487a85  src/SelfDev_ClarityLab_v2_Android_Source.zip" | sha256sum -c -
+          mkdir buildsrc
+          unzip -oq src/SelfDev_ClarityLab_v2_Android_Source.zip -d buildsrc
+          cmp Clarity_Lab_SelfDev_Offline.html buildsrc/Clarity_Lab_SelfDev_Offline.html
+          python3 buildsrc/tests/verify_app.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - uses: android-actions/setup-android@v4
+      - name: Install pinned Android platform
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+      - name: Assemble signed debug APK
+        working-directory: buildsrc/android
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
+      - name: Verify package, ZIP integrity, signature and digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=buildsrc/android/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -t "$APK" | tail -n 1
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee apk-badging.txt
+          grep -F "package: name='com.msa.claritylab'" apk-badging.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee apk-signature.txt
+          grep -E 'Verified using v[0-9.]+ scheme.*: true' apk-signature.txt
+          sha256sum "$APK" | tee apk-sha256.txt
+          unzip -p "$APK" assets/index.html | sha256sum | tee asset-sha256.txt
+          cmp buildsrc/Clarity_Lab_SelfDev_Offline.html buildsrc/android/app/src/main/assets/index.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: selfdev-clarity-lab-debug-apk
+          path: |
+            buildsrc/android/app/build/outputs/apk/debug/app-debug.apk
+            apk-badging.txt
+            apk-signature.txt
+            apk-sha256.txt
+            asset-sha256.txt
+          retention-days: 7
+          if-no-files-found: error
